@@ -4,170 +4,524 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Auto Text Cleaner</title>
+  <title>AES Encryption / Decryption Tool</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
   <style>
+    :root {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --text: #e0e0e0;
+      --border: #333;
+      --input-bg: #252525;
+      --btn-bg: #ffffff;
+      --btn-text: #000000;
+      --tag-active-bg: #ffffff;
+      --tag-active-text: #000000;
+      --footer-color: #888;
+    }
+
+    body.light-mode {
+      --bg: #f4f4f4;
+      --card-bg: #ffffff;
+      --text: #1a1a1a;
+      --border: #ccc;
+      --input-bg: #ffffff;
+      --btn-bg: #000000;
+      --btn-text: #ffffff;
+      --tag-active-bg: #000000;
+      --tag-active-text: #ffffff;
+      --footer-color: #555;
+    }
+
     * {
       box-sizing: border-box;
       font-family: Arial, sans-serif;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
     }
 
     body {
       margin: 0;
-      padding: 30px;
-      background: #111827;
-      color: white;
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: auto;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 30px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 1024px;
+      margin: auto;
+    }
+
+    .card {
+      flex: 1;
+      min-width: 320px;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .row {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
     }
 
     .box {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    textarea,
+    select {
+      width: 100%;
+      background: var(--input-bg);
+      color: var(--text);
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      resize: vertical;
+      font-size: 14px;
     }
 
     textarea {
-      width: 100%;
-      height: 400px;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      resize: none;
-      font-size: 14px;
-      background: #1f2937;
-      color: white;
-      outline: none;
+      height: 240px;
     }
 
-    .buttons {
-      margin-top: 20px;
+    .options {
       display: flex;
-      gap: 15px;
+      gap: 10px;
       flex-wrap: wrap;
-      justify-content: center;
+      margin-top: 5px;
+    }
+
+    .tag {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .tag.active {
+      background: var(--tag-active-bg);
+      color: var(--tag-active-text);
+      border-color: var(--tag-active-bg);
     }
 
     button {
-      padding: 12px 20px;
+      width: 100%;
+      padding: 12px;
       border: none;
-      border-radius: 8px;
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border-radius: 6px;
+      margin-top: 20px;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: bold;
-      background: #2563eb;
-      color: white;
-      transition: 0.2s;
     }
 
-    button:hover {
-      background: #1d4ed8;
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 14px;
+      color: var(--footer-color);
+    }
+
+    .footer span {
+      color: #ff4d6d;
     }
 
     @media(max-width:768px) {
-      .box {
-        grid-template-columns: 1fr;
+      .row {
+        flex-direction: column;
       }
-    }
-
-    #toast {
-      position: fixed;
-      top: 30px;
-      right: 30px;
-      background: #22c55e;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: 0.3s;
-      pointer-events: none;
-    }
-
-    #toast.show {
-      opacity: 1;
-      transform: translateY(0);
     }
   </style>
 </head>
 
 <body>
 
+  <h1>
+    AES Encryption / Decryption Tool
+    <br>
+    <small style="font-size:14px; font-weight:normal; opacity:0.7;">
+      Made with ♥ by Rishi Vyas • For developers, by a developer
+    </small>
+  </h1>
+  <div style="
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999;
+">
+    <button id="themeToggle" style="
+    width: auto;
+    padding: 8px 14px;
+    margin-top: 0;
+    font-size: 12px;
+    border-radius: 20px;
+  ">
+      ☀ Light Mode
+    </button>
+  </div>
+
   <div class="container">
-    <h1>Auto Whitespace Remover</h1>
+    <!-- DECRYPTION -->
+    <div class="card">
+      <h2>AES Decryption</h2>
 
-    <div class="box">
+      <div class="row">
+        <div class="box">
+          <label>Encrypted Text</label>
+          <textarea id="decryptInput"></textarea>
+          <br>
+          <br>
+          <br>
+          <br>
 
-      <!-- INPUT -->
-      <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+          <label>Secret Key</label>
+          <select id="decryptKey">
+            <option selected>
+              12031993200520211203199320052021
+            </option>
+            <option>
+              m539fzg7zv0d5doka44ywwurbglxx74d
+            </option>
+          </select>
 
-      <!-- OUTPUT -->
-      <textarea id="outputText" placeholder="Cleaned output will appear here..." readonly></textarea>
+          <br><br>
+
+          <label>Encryption Key Size</label>
+          <div class="options" id="decryptKeySize">
+            <div class="tag">128 Bits</div>
+            <div class="tag">192 Bits</div>
+            <div class="tag active">256 Bits</div>
+          </div>
+
+          <br>
+
+          <label>Encryption Mode</label>
+          <div class="options" id="decryptMode">
+            <div class="tag active">CBC</div>
+            <div class="tag">ECB</div>
+          </div>
+
+          <br>
+
+          <label>IV</label>
+          <select id="decryptIV">
+            <option selected>1203199320052021</option>
+            <option>s9c976e7nvrigkh6</option>
+          </select>
+          <button onclick="decryptText()">Decrypt</button>
+
+        </div>
+
+        <div class="box">
+          <label>Decrypted Response</label>
+
+          <textarea id="decryptOutput" readonly></textarea>
+          <div class="options" id="responseType">
+            <div class="tag" data-type="text">Text</div>
+            <div class="tag active" data-type="json">JSON</div>
+          </div>
+        </div>
+      </div>
+
+
+
+    </div>
+    <!-- ENCRYPTION -->
+    <div class="card">
+      <h2>AES Encryption</h2>
+
+      <div class="row">
+        <div class="box">
+          <label>Encryption Text</label>
+          <textarea id="encryptInput"></textarea>
+          <br>
+
+          <label>Secret Key</label>
+          <select id="encryptKey">
+            <option selected>
+              12031993200520211203199320052021
+            </option>
+            <option>
+              m539fzg7zv0d5doka44ywwurbglxx74d
+            </option>
+          </select>
+
+          <br><br>
+
+          <label>Encryption Key Size</label>
+          <div class="options" id="encryptKeySize">
+            <div class="tag">128 Bits</div>
+            <div class="tag">192 Bits</div>
+            <div class="tag active">256 Bits</div>
+          </div>
+
+          <br>
+
+          <label>Encryption Mode</label>
+          <div class="options" id="encryptMode">
+            <div class="tag active">CBC</div>
+            <div class="tag">ECB</div>
+          </div>
+
+          <br>
+
+          <label>IV</label>
+          <select id="encryptIV">
+            <option selected>1203199320052021</option>
+            <option>s9c976e7nvrigkh6</option>
+          </select>
+
+          <button onclick="encryptText()">Encrypt</button>
+        </div>
+
+        <div class="box">
+          <label>Encrypted Response</label>
+          <textarea id="encryptOutput" readonly></textarea>
+        </div>
+      </div>
+
 
     </div>
 
-    <div class="buttons">
-      <button onclick="copyOutput()">Copy Output</button>
-      <button onclick="clearAll()">Clear</button>
+
+    <div class="footer">
+      Made with <span>♥</span> by <strong>Rishi Vyas</strong><br>
+      <small>For developers • By a developer</small>
     </div>
   </div>
 
   <script>
 
-    const inputBox =
-      document.getElementById("inputText");
+    // ACTIVE BUTTON TOGGLE
+    document.querySelectorAll('.options').forEach(group => {
+      group.querySelectorAll('.tag').forEach(btn => {
 
-    const outputBox =
-      document.getElementById("outputText");
+        btn.addEventListener('click', () => {
+          group.querySelectorAll('.tag')
+            .forEach(b => b.classList.remove('active'));
 
-    // AUTO CLEAN WHEN USER TYPES OR PASTES
-    inputBox.addEventListener("input", () => {
+          btn.classList.add('active');
 
-      const cleaned =
-        inputBox.value.replace(/[\s\u00A0]+/g, '');
+          // Re-format output when response type changes
+          if (group.id === 'responseType') {
+            reformatDecryptOutput();
+          }
+        });
 
-      outputBox.value = cleaned;
+      });
     });
 
-    // COPY OUTPUT
-    function copyOutput() {
+    // Re-format decrypt output when switching between Text/JSON
+    function reformatDecryptOutput() {
+      const currentOutput = document.getElementById('decryptOutput').value;
+      if (!currentOutput || currentOutput === 'Decryption Error') return;
 
-      navigator.clipboard.writeText(outputBox.value);
+      const responseType = document.querySelector('#responseType .active').dataset.type;
 
-      showToast("Copied Successfully!");
+      if (responseType === 'json') {
+        try {
+          const formatted = JSON.stringify(JSON.parse(currentOutput), null, 2);
+          document.getElementById('decryptOutput').value = formatted;
+        } catch (e) {
+          // keep original if not valid JSON
+        }
+      }
     }
 
-    // CLEAR BOTH
-    function clearAll() {
+    // AUTO CLEAN + AUTO PROCESS
+    function autoClean(inputId, callback) {
 
-      inputBox.value = "";
-      outputBox.value = "";
-    }
-    function showToast(message) {
+      const inputBox = document.getElementById(inputId);
 
-      const toast =
-        document.getElementById("toast");
+      inputBox.addEventListener("input", () => {
 
-      toast.innerText = message;
+        // REMOVE ALL SPACES + NEWLINES
+        inputBox.value =
+          inputBox.value.replace(/[\s\u00A0]+/g, '');
 
-      toast.classList.add("show");
+        // AUTO RUN
+        callback();
 
-      setTimeout(() => {
-        toast.classList.remove("show");
-      }, 2000);
+      });
+
     }
 
+
+    // AUTO ENCRYPT
+    autoClean("encryptInput", encryptText);
+
+    // AUTO DECRYPT
+    autoClean("decryptInput", decryptText);
+
+
+    // GET ACTIVE VALUE
+    function getActiveText(parentId) {
+      return document.querySelector(
+        `#${parentId} .active`
+      ).innerText;
+    }
+
+
+    // ENCRYPT
+    function encryptText() {
+
+      try {
+
+        const text = document.getElementById("encryptInput").value;
+
+        const key = document.getElementById("encryptKey").value;
+
+        const iv = document.getElementById("encryptIV").value;
+
+        const mode = getActiveText("encryptMode");
+
+        const keyUtf8 = CryptoJS.enc.Utf8.parse(key);
+
+        const ivUtf8 = CryptoJS.enc.Utf8.parse(iv);
+
+        const options = {
+          mode:
+            mode === "CBC"
+              ? CryptoJS.mode.CBC
+              : CryptoJS.mode.ECB,
+
+          padding: CryptoJS.pad.Pkcs7
+        };
+
+        if (mode === "CBC") {
+          options.iv = ivUtf8;
+        }
+
+        const encrypted = CryptoJS.AES.encrypt(
+          text,
+          keyUtf8,
+          options
+        ).toString();
+
+        document.getElementById("encryptOutput").value =
+          encrypted;
+
+      } catch (err) {
+        alert("Encryption Error");
+      }
+
+    }
+
+
+    function decryptText() {
+
+      try {
+
+        const encryptedText =
+          document.getElementById("decryptInput").value;
+
+        const key =
+          document.getElementById("decryptKey").value;
+
+        const iv =
+          document.getElementById("decryptIV").value;
+
+        const mode = getActiveText("decryptMode");
+
+        const responseType =
+          document.querySelector(
+            '#responseType .active'
+          ).dataset.type;
+
+        const keyUtf8 = CryptoJS.enc.Utf8.parse(key);
+
+        const ivUtf8 = CryptoJS.enc.Utf8.parse(iv);
+
+        const options = {
+          mode:
+            mode === "CBC"
+              ? CryptoJS.mode.CBC
+              : CryptoJS.mode.ECB,
+
+          padding: CryptoJS.pad.Pkcs7
+        };
+
+        if (mode === "CBC") {
+          options.iv = ivUtf8;
+        }
+
+        const decrypted = CryptoJS.AES.decrypt(
+          encryptedText,
+          keyUtf8,
+          options
+        );
+
+        let result =
+          decrypted.toString(CryptoJS.enc.Utf8);
+
+        // JSON FORMAT
+        if (responseType === "json") {
+
+          try {
+            result = JSON.stringify(
+              JSON.parse(result),
+              null,
+              2
+            );
+          } catch (e) {
+            // invalid json
+          }
+
+        }
+
+        document.getElementById("decryptOutput").value =
+          result;
+
+      } catch (err) {
+
+        document.getElementById("decryptOutput").value =
+          "Decryption Error";
+
+      }
+
+    }
+    // THEME TOGGLE
+    const themeToggle = document.getElementById("themeToggle");
+
+    themeToggle.addEventListener("click", () => {
+
+      document.body.classList.toggle("light-mode");
+
+      // CHANGE BUTTON TEXT
+      if (document.body.classList.contains("light-mode")) {
+        themeToggle.innerText = "🌙 Dark Mode";
+      } else {
+        themeToggle.innerText = "☀ Light Mode";
+      }
+
+    });
   </script>
-  <div id="toast">Copied Successfully!</div>
+
 </body>
 
 </html>
