@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cURL Runner + AES Decrypt Tool</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card-bg: #141414;
+      --text: #e8e8e8;
+      --text-dim: #8a8a8a;
+      --border: #2a2a2a;
+      --input-bg: #1b1b1b;
+      --btn-bg: #ffffff;
+      --btn-text: #000000;
+      --tag-active-bg: #ffffff;
+      --tag-active-text: #000000;
+      --accent: #4d7fff;
+      --ok: #3ecf6f;
+      --err: #ff5d5d;
+      --footer-color: #777;
+    }
+
+    body.light-mode {
+      --bg: #f4f4f4;
+      --card-bg: #ffffff;
+      --text: #1a1a1a;
+      --text-dim: #666;
+      --border: #ddd;
+      --input-bg: #fafafa;
+      --btn-bg: #000000;
+      --btn-text: #ffffff;
+      --tag-active-bg: #000000;
+      --tag-active-text: #ffffff;
+      --footer-color: #555;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 22px;
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      gap: 10px;
+    }
+
+    .top-bar button {
+      width: auto;
+      padding: 8px 14px;
+      margin: 0;
+      font-size: 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .page-nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .page-nav a {
+      padding: 8px 18px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .page-nav a.active {
+      background: var(--tag-active-bg);
+      color: var(--tag-active-text);
+      border-color: var(--tag-active-bg);
+    }
+
+    .wrapper {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .textarea-wrap {
+      position: relative;
+    }
+
+    textarea,
+    input[type="text"],
+    select {
+      width: 100%;
+      background: var(--input-bg);
+      color: var(--text);
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      font-size: 14px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    select {
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+    }
+
+    textarea {
+      min-height: 140px;
+    }
+
+    textarea#curlInput {
+      min-height: 180px;
+    }
+
+    textarea#requestBody {
+      min-height: 110px;
+    }
+
+    textarea#rawResponse,
+    textarea#decryptedResponse {
+      min-height: 200px;
+    }
+
+    textarea::placeholder,
+    input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: auto;
+      padding: 6px;
+      margin: 0;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
+    }
+
+    .copy-btn:hover {
+      color: var(--text);
+      border-color: var(--text-dim);
+    }
+
+    .copy-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .method-url-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 12px;
+    }
+
+    .send-row {
+      display: grid;
+      grid-template-columns: 130px 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    button.send-btn {
+      width: auto;
+      padding: 12px 22px;
+      border: none;
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    button.send-btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 5px;
+    }
+
+    .tag {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+    }
+
+    .tag.active {
+      background: var(--tag-active-bg);
+      color: var(--tag-active-text);
+      border-color: var(--tag-active-bg);
+    }
+
+    .field-block {
+      margin-top: 18px;
+    }
+
+    .field-block:first-child {
+      margin-top: 0;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    /* HEADERS TABLE */
+    .headers-table {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .header-row {
+      display: grid;
+      grid-template-columns: 24px 1fr 1fr 30px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .header-row input[type="text"] {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .header-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .remove-header-btn {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      margin: 0;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text-dim);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .remove-header-btn:hover {
+      color: var(--err);
+      border-color: var(--err);
+    }
+
+    .add-header-btn {
+      margin-top: 4px;
+      width: auto;
+      padding: 8px 14px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      align-self: flex-start;
+    }
+
+    /* STATUS BAR */
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .status-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+
+    .status-pill.ok {
+      color: var(--ok);
+      border-color: var(--ok);
+    }
+
+    .status-pill.err {
+      color: var(--err);
+      border-color: var(--err);
+    }
+
+    .cors-note {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 14px;
+      color: var(--footer-color);
+    }
+
+    .footer span {
+      color: #ff4d6d;
+    }
+
+    @media(max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .method-url-row,
+      .send-row,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>
+    cURL Runner + AES Decrypt Tool
+    <br>
+    <small style="font-size:14px; font-weight:normal; opacity:0.7;">
+      Made with &hearts; by Rishi Vyas &bull; For developers, by a developer
+    </small>
+  </h1>
+
+  <div class="top-bar">
+    <button id="themeToggle">&#9728; Light Mode</button>
+  </div>
+
+  <nav class="page-nav">
+    <a href="index.html">AES Encrypt / Decrypt</a>
+    <a href="curl-decrypt.html">cURL &rarr; Decrypt</a>
+    <a href="postman.html" class="active">cURL Runner</a>
+  </nav>
+
+  <div class="wrapper">
+    <div class="grid">
+
+      <!-- LEFT COLUMN: REQUEST -->
+      <div class="col">
+
+        <div class="panel">
+          <span class="label" style="margin-bottom:8px;">Paste Raw cURL</span>
+          <div class="textarea-wrap">
+            <textarea id="curlInput" placeholder="curl 'https://api...' -H '...' --data-raw '...'"></textarea>
+            <button class="copy-btn" data-copy="curlInput" title="Copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="send-row">
+            <div>
+              <span class="label">Method</span>
+              <select id="methodSelect">
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>PATCH</option>
+                <option>DELETE</option>
+                <option>HEAD</option>
+                <option>OPTIONS</option>
+              </select>
+            </div>
+            <div>
+              <span class="label">URL</span>
+              <input type="text" id="urlInput" placeholder="https://api.example.com/endpoint" />
+            </div>
+            <div>
+              <span class="label">&nbsp;</span>
+              <button class="send-btn" id="sendBtn">Send</button>
+            </div>
+          </div>
+
+          <div class="field-block">
+            <div class="field-block">
+              <span class="label">Body</span>
+              <textarea id="requestBody" placeholder="Request body (sent as-is for POST/PUT/PATCH)"></textarea>
+            </div>
+
+            <div class="field-block">
+              <span class="label">Decrypted Body</span>
+              <div class="textarea-wrap">
+                <textarea id="decryptedBody" placeholder="Decrypted request body will appear here..."
+                  readonly></textarea>
+                <button class="copy-btn" data-copy="decryptedBody" title="Copy">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <span class="label field-block">Authorization</span>
+
+            <div class="options" id="authType">
+              <div class="tag active" data-type="none">No Auth</div>
+              <div class="tag" data-type="bearer">Bearer Token</div>
+            </div>
+            <div id="bearerTokenWrap" style="margin-top:10px; display:none;">
+              <input type="text" id="bearerToken" placeholder="Paste token (without the word 'Bearer')" />
+            </div>
+          </div>
+
+          <div class="field-block">
+            <span class="label">Headers</span>
+            <div class="headers-table" id="headersTable"></div>
+            <button class="add-header-btn" id="addHeaderBtn">+ Add Header</button>
+          </div>
+
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: AES CONFIG + RESPONSE -->
+      <div class="col">
+
+
+
+        <div class="panel">
+          <div class="status-bar" id="statusBar">
+            <span class="status-pill" id="statusPill">Not sent</span>
+            <span id="statusTime"></span>
+            <span id="statusSize"></span>
+          </div>
+
+          <div class="field-block">
+            <div class="result-header">
+              <div class="section-title" style="margin-bottom:0;">Raw Response</div>
+            </div>
+            <div class="textarea-wrap">
+              <textarea id="rawResponse" placeholder="Response will appear here..." readonly></textarea>
+              <button class="copy-btn" data-copy="rawResponse" title="Copy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-block">
+            <div class="result-header">
+              <div class="section-title" style="margin-bottom:0;">Decrypted Response</div>
+              <div class="options" id="responseType">
+                <div class="tag active" data-type="json">JSON</div>
+                <div class="tag" data-type="text">TEXT</div>
+              </div>
+            </div>
+            <div class="textarea-wrap">
+              <textarea id="decryptedResponse" placeholder="Decrypted response will appear here..." readonly></textarea>
+              <button class="copy-btn" data-copy="decryptedResponse" title="Copy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="cors-note">
+            Requests run directly from this browser tab. If the API doesn't send CORS headers
+            (<code>Access-Control-Allow-Origin</code>), the browser will block the response even
+            though the request reaches the server &mdash; that's a browser restriction this tool
+            can't bypass.
+          </div>
+        </div>
+        <div class="panel">
+          <div class="two-col">
+            <div>
+              <span class="label">Secret Key</span>
+              <input type="text" id="secretKey" value="12031993200520211203199320052021" />
+            </div>
+            <div>
+              <span class="label">IV (16 bytes)</span>
+              <input type="text" id="ivInput" value="1203199320052021" />
+            </div>
+          </div>
+
+          <div class="field-block">
+            <span class="label">Key Size</span>
+            <div class="options" id="keySize">
+              <div class="tag">128</div>
+              <div class="tag">192</div>
+              <div class="tag active">256</div>
+            </div>
+          </div>
+
+          <div class="two-col field-block">
+            <div>
+              <span class="label">Mode</span>
+              <div class="options" id="mode">
+                <div class="tag active">CBC</div>
+                <div class="tag">ECB</div>
+              </div>
+            </div>
+            <div>
+              <span class="label">Format</span>
+              <div class="options" id="format">
+                <div class="tag active">Base64</div>
+                <div class="tag">HEX</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      Made with <span>&hearts;</span> by <strong>Rishi Vyas</strong><br>
+      <small>For developers &bull; By a developer</small>
+    </div>
+  </div>
+
+  <script>
+
+    // ===== TAG TOGGLE GROUPS =====
+    document.querySelectorAll('.options').forEach(group => {
+      group.querySelectorAll('.tag').forEach(btn => {
+        btn.addEventListener('click', () => {
+          group.querySelectorAll('.tag').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          if (group.id === 'responseType') {
+            reformatDecrypted();
+          } else if (group.id === 'authType') {
+            document.getElementById('bearerTokenWrap').style.display =
+              btn.dataset.type === 'bearer' ? 'block' : 'none';
+          } else {
+            decryptResponse();
+            decryptBody();
+          }
+        });
+      });
+    });
+
+    function getActiveText(parentId) {
+      return document.querySelector(`#${parentId} .active`).innerText.trim();
+    }
+
+    function getActiveType(parentId) {
+      return document.querySelector(`#${parentId} .active`).dataset.type;
+    }
+
+    // ===== CURL PARSING =====
+    function tokenizeCurl(str) {
+      const cleaned = str.replace(/\\\r?\n/g, ' ');
+      const tokens = [];
+      let i = 0;
+      const n = cleaned.length;
+
+      while (i < n) {
+        while (i < n && /\s/.test(cleaned[i])) i++;
+        if (i >= n) break;
+
+        if (cleaned[i] === "'" || cleaned[i] === '"') {
+          const quote = cleaned[i];
+          i++;
+          let buf = '';
+          while (i < n && cleaned[i] !== quote) {
+            if (cleaned[i] === '\\' && quote === '"' && i + 1 < n) {
+              buf += cleaned[i + 1];
+              i += 2;
+              continue;
+            }
+            buf += cleaned[i];
+            i++;
+          }
+          i++;
+          tokens.push(buf);
+        } else {
+          let start = i;
+          while (i < n && !/\s/.test(cleaned[i])) i++;
+          tokens.push(cleaned.slice(start, i));
+        }
+      }
+      return tokens;
+    }
+
+    const BODY_FLAGS = new Set(['-d', '--data', '--data-raw', '--data-binary', '--data-ascii', '--data-urlencode']);
+    const VALUE_FLAGS = new Set([
+      '-b', '--cookie', '-e', '--referer', '-A', '--user-agent',
+      '-u', '--user', '--connect-timeout', '-m', '--max-time', '-o', '--output',
+      '--url', '-F', '--form', '-r', '--range', '-E', '--cert', '--cacert'
+    ]);
+
+    function parseCurl(raw) {
+      const tokens = tokenizeCurl(raw.trim());
+      let url = '', method = '', body = '';
+      const headers = [];
+
+      for (let idx = 0; idx < tokens.length; idx++) {
+        const t = tokens[idx];
+
+        if (idx === 0 && t.toLowerCase() === 'curl') continue;
+
+        if (t === '-X' || t === '--request') {
+          method = tokens[++idx] || '';
+          continue;
+        }
+        if (t === '-H' || t === '--header') {
+          const line = tokens[++idx] || '';
+          const sep = line.indexOf(':');
+          if (sep > -1) {
+            headers.push({ key: line.slice(0, sep).trim(), value: line.slice(sep + 1).trim() });
+          }
+          continue;
+        }
+        if (BODY_FLAGS.has(t)) {
+          body = tokens[++idx] || '';
+          continue;
+        }
+        if (t === '--url') {
+          url = tokens[++idx] || '';
+          continue;
+        }
+        if (t.startsWith('-')) {
+          if (VALUE_FLAGS.has(t)) idx++;
+          continue;
+        }
+        if (!url) url = t;
+      }
+
+      if (!method) method = body ? 'POST' : 'GET';
+
+      return { url, method: method.toUpperCase(), body, headers };
+    }
+
+    // ===== HEADERS TABLE UI =====
+    function addHeaderRow(key, value, enabled) {
+      key = key || '';
+      value = value || '';
+      enabled = enabled !== false;
+
+      const row = document.createElement('div');
+      row.className = 'header-row';
+      row.innerHTML = `
+        <input type="checkbox" class="header-enabled" ${enabled ? 'checked' : ''} />
+        <input type="text" class="header-key" placeholder="Header" value="${escapeAttr(key)}" />
+        <input type="text" class="header-value" placeholder="Value" value="${escapeAttr(value)}" />
+        <button class="remove-header-btn" title="Remove">&times;</button>
+      `;
+
+      row.querySelector('.remove-header-btn').addEventListener('click', () => row.remove());
+      document.getElementById('headersTable').appendChild(row);
+    }
+
+    function escapeAttr(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    }
+
+    function clearHeaderRows() {
+      document.getElementById('headersTable').innerHTML = '';
+    }
+
+    document.getElementById('addHeaderBtn').addEventListener('click', () => addHeaderRow('', '', true));
+
+    // ===== IMPORT CURL INTO REQUEST BUILDER =====
+    function processCurl() {
+      const raw = document.getElementById('curlInput').value;
+      if (!raw.trim()) return;
+
+      const { url, method, body, headers } = parseCurl(raw);
+
+      if (url) document.getElementById('urlInput').value = url;
+
+      const methodSelect = document.getElementById('methodSelect');
+      if (method && [...methodSelect.options].some(o => o.value === method)) {
+        methodSelect.value = method;
+      }
+
+      const bearerMatch = headers.find(h =>
+        h.key.toLowerCase() === 'authorization' && /^bearer\s+/i.test(h.value)
+      );
+
+      const remainingHeaders = bearerMatch
+        ? headers.filter(h => h !== bearerMatch)
+        : headers;
+
+      clearHeaderRows();
+      remainingHeaders.forEach(h => addHeaderRow(h.key, h.value, true));
+
+      if (bearerMatch) {
+        document.getElementById('bearerToken').value = bearerMatch.value.replace(/^bearer\s+/i, '');
+        setAuthType('bearer');
+      }
+
+      document.getElementById('requestBody').value = body || '';
+      decryptBody();
+    }
+
+    document.getElementById('requestBody').addEventListener('input', decryptBody);
+
+    function setAuthType(type) {
+      const group = document.getElementById('authType');
+      group.querySelectorAll('.tag').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === type);
+      });
+      document.getElementById('bearerTokenWrap').style.display = type === 'bearer' ? 'block' : 'none';
+    }
+
+    document.getElementById('curlInput').addEventListener('input', processCurl);
+
+    // ===== SENDING THE REQUEST =====
+    const FORBIDDEN_HEADERS = new Set([
+      'accept-charset', 'accept-encoding', 'access-control-request-headers',
+      'access-control-request-method', 'connection', 'content-length', 'cookie',
+      'cookie2', 'date', 'dnt', 'expect', 'host', 'keep-alive', 'origin',
+      'referer', 'set-cookie', 'te', 'trailer', 'transfer-encoding', 'upgrade', 'via'
+    ]);
+
+    function collectEnabledHeaders() {
+      const result = {};
+      document.querySelectorAll('.header-row').forEach(row => {
+        if (!row.querySelector('.header-enabled').checked) return;
+        const key = row.querySelector('.header-key').value.trim();
+        const value = row.querySelector('.header-value').value.trim();
+        if (!key) return;
+        const lower = key.toLowerCase();
+        if (FORBIDDEN_HEADERS.has(lower) || lower.startsWith('sec-') || lower.startsWith('proxy-')) return;
+        result[key] = value;
+      });
+
+      const authType = getActiveType('authType');
+      const token = document.getElementById('bearerToken').value.trim();
+      if (authType === 'bearer' && token) {
+        result['Authorization'] = 'Bearer ' + token;
+      }
+
+      return result;
+    }
+
+    function setStatus(text, kind) {
+      const pill = document.getElementById('statusPill');
+      pill.textContent = text;
+      pill.className = 'status-pill' + (kind ? ' ' + kind : '');
+    }
+
+    async function sendRequest() {
+      const url = document.getElementById('urlInput').value.trim();
+      const method = document.getElementById('methodSelect').value;
+      const rawBox = document.getElementById('rawResponse');
+      const sendBtn = document.getElementById('sendBtn');
+
+      if (!url) {
+        setStatus('No URL', 'err');
+        return;
+      }
+
+      const headers = collectEnabledHeaders();
+      const bodyText = document.getElementById('requestBody').value;
+
+      const options = { method, headers };
+      if (!['GET', 'HEAD'].includes(method) && bodyText) {
+        options.body = bodyText;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+      setStatus('Sending...');
+      document.getElementById('statusTime').textContent = '';
+      document.getElementById('statusSize').textContent = '';
+      rawBox.value = '';
+      document.getElementById('decryptedResponse').value = '';
+
+      const start = performance.now();
+
+      try {
+        const res = await fetch(url, options);
+        const elapsed = Math.round(performance.now() - start);
+        const text = await res.text();
+
+        setStatus(`${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
+        document.getElementById('statusTime').textContent = `${elapsed} ms`;
+        document.getElementById('statusSize').textContent = `${new Blob([text]).size} bytes`;
+
+        rawBox.value = prettyIfJson(text);
+        decryptResponse(text);
+      } catch (err) {
+        setStatus('Request failed', 'err');
+        rawBox.value =
+          'Request failed: ' + err.message +
+          '\n\nThis is usually CORS: the browser blocks the response unless the server sends ' +
+          'Access-Control-Allow-Origin for this page\'s origin. Try the request from a proxy/server ' +
+          'context if you need to bypass it.';
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
+      }
+    }
+
+    function prettyIfJson(text) {
+      try {
+        return JSON.stringify(JSON.parse(text), null, 2);
+      } catch (e) {
+        return text;
+      }
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendRequest);
+
+    // ===== CIPHER EXTRACTION FROM RESPONSE =====
+    const CIPHER_KEY_PRIORITY = [
+      'cipher', 'ciphertext', 'cipher_text', 'encrypted', 'encrypteddata',
+      'encrypted_data', 'payload', 'data', 'response', 'result', 'token'
+    ];
+
+    function findCipherInObject(obj, depth) {
+      depth = depth || 0;
+      if (depth > 3 || obj === null || typeof obj !== 'object' || Array.isArray(obj)) return null;
+
+      const keys = Object.keys(obj);
+
+      for (const pk of CIPHER_KEY_PRIORITY) {
+        for (const k of keys) {
+          if (k.toLowerCase() === pk && typeof obj[k] === 'string' && obj[k].length > 8) {
+            return obj[k];
+          }
+        }
+      }
+
+      for (const k of keys) {
+        if (typeof obj[k] === 'object') {
+          const found = findCipherInObject(obj[k], depth + 1);
+          if (found) return found;
+        }
+      }
+
+      return null;
+    }
+
+    function extractCipherFromText(text) {
+      const trimmed = (text || '').trim();
+      if (!trimmed) return '';
+
+      try {
+        const obj = JSON.parse(trimmed);
+        if (typeof obj === 'string') return obj;
+        const found = findCipherInObject(obj);
+        if (found) return found;
+      } catch (e) {
+        // not JSON
+      }
+
+      return trimmed;
+    }
+
+    // ===== DECRYPTION =====
+    let lastResponseText = '';
+
+    function parseCiphertext(str, format) {
+      const trimmed = str.trim();
+      if (format === 'HEX') {
+        return CryptoJS.lib.CipherParams.create({
+          ciphertext: CryptoJS.enc.Hex.parse(trimmed)
+        });
+      }
+      return trimmed;
+    }
+
+    function decryptTextInto(rawText, resultBoxId) {
+      const resultBox = document.getElementById(resultBoxId);
+      const cipherText = extractCipherFromText(rawText);
+
+      if (!cipherText) {
+        resultBox.value = '';
+        return;
+      }
+
+      try {
+        const key = document.getElementById('secretKey').value;
+        const iv = document.getElementById('ivInput').value;
+        const mode = getActiveText('mode');
+        const format = getActiveText('format');
+        const responseType = getActiveType('responseType');
+
+        const keyUtf8 = CryptoJS.enc.Utf8.parse(key);
+        const ivUtf8 = CryptoJS.enc.Utf8.parse(iv);
+
+        const options = {
+          mode: mode === 'CBC' ? CryptoJS.mode.CBC : CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7
+        };
+        if (mode === 'CBC') options.iv = ivUtf8;
+
+        const cipherParams = parseCiphertext(cipherText, format);
+        const decrypted = CryptoJS.AES.decrypt(cipherParams, keyUtf8, options);
+        let result = decrypted.toString(CryptoJS.enc.Utf8);
+
+        if (!result) throw new Error('empty');
+
+        if (responseType === 'json') {
+          try {
+            result = JSON.stringify(JSON.parse(result), null, 2);
+          } catch (e) {
+            // not valid JSON, leave as-is
+          }
+        }
+
+        resultBox.value = result;
+      } catch (err) {
+        resultBox.value = 'Decryption Error';
+      }
+    }
+
+    function decryptResponse(text) {
+      if (text !== undefined) lastResponseText = text;
+      decryptTextInto(lastResponseText, 'decryptedResponse');
+    }
+
+    function decryptBody() {
+      const bodyText = document.getElementById('requestBody').value;
+      decryptTextInto(bodyText, 'decryptedBody');
+    }
+
+    function reformatDecrypted() {
+      const resultBox = document.getElementById('decryptedResponse');
+      if (resultBox.value && resultBox.value !== 'Decryption Error') decryptResponse();
+
+      const bodyBox = document.getElementById('decryptedBody');
+      if (bodyBox.value && bodyBox.value !== 'Decryption Error') decryptBody();
+    }
+
+    // ===== PERSIST SECRET KEY / IV IN LOCAL STORAGE (shared with cURL Decrypt tool) =====
+    const STORAGE_KEY_SECRET = 'curlDecrypt_secretKey';
+    const STORAGE_KEY_IV = 'curlDecrypt_iv';
+
+    function loadStoredCredentials() {
+      const storedKey = localStorage.getItem(STORAGE_KEY_SECRET);
+      const storedIv = localStorage.getItem(STORAGE_KEY_IV);
+      if (storedKey) document.getElementById('secretKey').value = storedKey;
+      if (storedIv) document.getElementById('ivInput').value = storedIv;
+    }
+
+    function persistCredentials() {
+      localStorage.setItem(STORAGE_KEY_SECRET, document.getElementById('secretKey').value);
+      localStorage.setItem(STORAGE_KEY_IV, document.getElementById('ivInput').value);
+    }
+
+    loadStoredCredentials();
+
+    document.getElementById('secretKey').addEventListener('input', () => {
+      persistCredentials();
+      decryptResponse();
+      decryptBody();
+    });
+    document.getElementById('ivInput').addEventListener('input', () => {
+      persistCredentials();
+      decryptResponse();
+      decryptBody();
+    });
+
+    // ===== COPY BUTTONS =====
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const targetId = btn.dataset.copy;
+        const el = document.getElementById(targetId);
+        if (!el.value) return;
+        try {
+          await navigator.clipboard.writeText(el.value);
+          const original = btn.innerHTML;
+          btn.innerHTML = '&#10003;';
+          setTimeout(() => { btn.innerHTML = original; }, 1000);
+        } catch (e) {
+          // clipboard unavailable
+        }
+      });
+    });
+
+    // ===== THEME TOGGLE =====
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      themeToggle.innerHTML = document.body.classList.contains('light-mode')
+        ? '&#127769; Dark Mode'
+        : '&#9728; Light Mode';
+    });
+
+    // ===== INIT =====
+    addHeaderRow('Content-Type', 'application/json', true);
+
+  </script>
+
+</body>
+
+</html>

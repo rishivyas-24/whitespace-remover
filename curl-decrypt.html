@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cURL to AES Decrypt Tool</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card-bg: #141414;
+      --text: #e8e8e8;
+      --text-dim: #8a8a8a;
+      --border: #2a2a2a;
+      --input-bg: #1b1b1b;
+      --btn-bg: #ffffff;
+      --btn-text: #000000;
+      --tag-active-bg: #ffffff;
+      --tag-active-text: #000000;
+      --accent: #4d7fff;
+      --footer-color: #777;
+    }
+
+    body.light-mode {
+      --bg: #f4f4f4;
+      --card-bg: #ffffff;
+      --text: #1a1a1a;
+      --text-dim: #666;
+      --border: #ddd;
+      --input-bg: #fafafa;
+      --btn-bg: #000000;
+      --btn-text: #ffffff;
+      --tag-active-bg: #000000;
+      --tag-active-text: #ffffff;
+      --footer-color: #555;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 22px;
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      gap: 10px;
+    }
+
+    .top-bar button {
+      width: auto;
+      padding: 8px 14px;
+      margin: 0;
+      font-size: 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .page-nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .page-nav a {
+      padding: 8px 18px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .page-nav a.active {
+      background: var(--tag-active-bg);
+      color: var(--tag-active-text);
+      border-color: var(--tag-active-bg);
+    }
+
+    .wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .textarea-wrap {
+      position: relative;
+    }
+
+    textarea,
+    input[type="text"],
+    select {
+      width: 100%;
+      background: var(--input-bg);
+      color: var(--text);
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      font-size: 14px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    select {
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+    }
+
+    textarea {
+      min-height: 220px;
+    }
+
+    textarea#extractedCipher {
+      min-height: 110px;
+    }
+
+    textarea#decryptedResult {
+      min-height: 260px;
+    }
+
+    textarea::placeholder,
+    input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .copy-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: auto;
+      padding: 6px;
+      margin: 0;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
+    }
+
+    .copy-btn:hover {
+      color: var(--text);
+      border-color: var(--text-dim);
+    }
+
+    .copy-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .method-url-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 15px;
+      margin-bottom: 24px;
+    }
+
+    .url-display {
+      cursor: default;
+    }
+
+    .url-display.waiting {
+      color: var(--accent);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    .options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 5px;
+    }
+
+    .tag {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+    }
+
+    .tag.active {
+      background: var(--tag-active-bg);
+      color: var(--tag-active-text);
+      border-color: var(--tag-active-bg);
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .arrow-row {
+      display: flex;
+      justify-content: center;
+      color: var(--text-dim);
+      margin: 20px 0;
+      font-size: 20px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .field-block {
+      margin-top: 18px;
+    }
+
+    .field-block:first-child {
+      margin-top: 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 14px;
+      color: var(--footer-color);
+    }
+
+    .footer span {
+      color: #ff4d6d;
+    }
+
+    @media(max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .method-url-row,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>
+    cURL &rarr; AES Decrypt Tool
+    <br>
+    <small style="font-size:14px; font-weight:normal; opacity:0.7;">
+      Made with &hearts; by Rishi Vyas &bull; For developers, by a developer
+    </small>
+  </h1>
+
+  <div class="top-bar">
+    <button id="themeToggle">&#9728; Light Mode</button>
+  </div>
+
+  <nav class="page-nav">
+    <a href="index.html">AES Encrypt / Decrypt</a>
+    <a href="curl-decrypt.html" class="active">cURL &rarr; Decrypt</a>
+    <a href="postman.html">cURL Runner</a>
+  </nav>
+
+  <div class="wrapper">
+    <div class="grid">
+
+      <!-- LEFT COLUMN -->
+      <div class="col">
+
+        <div class="panel">
+          <div class="field-row">
+            <span class="label" style="margin-bottom:0;">Step 1: Paste Raw cURL</span>
+          </div>
+          <div class="textarea-wrap">
+            <textarea id="curlInput" placeholder="curl 'https://api...' -H '...' --data-raw '...'"></textarea>
+            <button class="copy-btn" data-copy="curlInput" title="Copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="two-col">
+            <div>
+              <span class="label">Secret Key</span>
+              <input type="text" id="secretKey" value="12031993200520211203199320052021" />
+            </div>
+            <div>
+              <span class="label">IV (16 bytes)</span>
+              <input type="text" id="ivInput" value="1203199320052021" />
+            </div>
+          </div>
+
+          <div class="field-block">
+            <span class="label">Key Size</span>
+            <div class="options" id="keySize">
+              <div class="tag">128</div>
+              <div class="tag">192</div>
+              <div class="tag active">256</div>
+            </div>
+          </div>
+
+          <div class="two-col field-block">
+            <div>
+              <span class="label">Mode</span>
+              <div class="options" id="mode">
+                <div class="tag active">CBC</div>
+                <div class="tag">ECB</div>
+              </div>
+            </div>
+            <div>
+              <span class="label">Format</span>
+              <div class="options" id="format">
+                <div class="tag active">Base64</div>
+                <div class="tag">HEX</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col">
+        <div class="panel">
+
+          <div class="method-url-row">
+            <div>
+              <span class="label">Method</span>
+              <select id="methodSelect">
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>PATCH</option>
+                <option>DELETE</option>
+              </select>
+            </div>
+            <div>
+              <span class="label">URL</span>
+              <input type="text" id="urlDisplay" class="url-display waiting" readonly value="Waiting for input..." />
+            </div>
+          </div>
+
+          <div class="section-title">Step 2: Extracted Cipher</div>
+          <div class="textarea-wrap">
+            <textarea id="extractedCipher" placeholder="Ciphertext will appear here..."></textarea>
+            <button class="copy-btn" data-copy="extractedCipher" title="Copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="arrow-row">&#8595;</div>
+
+          <div class="result-header">
+            <div class="section-title" style="margin-bottom:0;">Step 3: Decrypted Result</div>
+            <div class="options" id="responseType">
+              <div class="tag active" data-type="json">JSON</div>
+              <div class="tag" data-type="text">TEXT</div>
+            </div>
+          </div>
+          <div class="textarea-wrap">
+            <textarea id="decryptedResult" placeholder="Decrypted result will appear here..." readonly></textarea>
+            <button class="copy-btn" data-copy="decryptedResult" title="Copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      Made with <span>&hearts;</span> by <strong>Rishi Vyas</strong><br>
+      <small>For developers &bull; By a developer</small>
+    </div>
+  </div>
+
+  <script>
+
+    // ===== TAG TOGGLE GROUPS =====
+    document.querySelectorAll('.options').forEach(group => {
+      group.querySelectorAll('.tag').forEach(btn => {
+        btn.addEventListener('click', () => {
+          group.querySelectorAll('.tag').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          if (group.id === 'responseType') {
+            reformatResult();
+          } else {
+            decryptCipher();
+          }
+        });
+      });
+    });
+
+    function getActiveText(parentId) {
+      return document.querySelector(`#${parentId} .active`).innerText.trim();
+    }
+
+    function getActiveType(parentId) {
+      return document.querySelector(`#${parentId} .active`).dataset.type;
+    }
+
+    // ===== CURL PARSING =====
+    function tokenizeCurl(str) {
+      const cleaned = str.replace(/\\\r?\n/g, ' ');
+      const tokens = [];
+      let i = 0;
+      const n = cleaned.length;
+
+      while (i < n) {
+        while (i < n && /\s/.test(cleaned[i])) i++;
+        if (i >= n) break;
+
+        if (cleaned[i] === "'" || cleaned[i] === '"') {
+          const quote = cleaned[i];
+          i++;
+          let buf = '';
+          while (i < n && cleaned[i] !== quote) {
+            if (cleaned[i] === '\\' && quote === '"' && i + 1 < n) {
+              buf += cleaned[i + 1];
+              i += 2;
+              continue;
+            }
+            buf += cleaned[i];
+            i++;
+          }
+          i++;
+          tokens.push(buf);
+        } else {
+          let start = i;
+          while (i < n && !/\s/.test(cleaned[i])) i++;
+          tokens.push(cleaned.slice(start, i));
+        }
+      }
+      return tokens;
+    }
+
+    const BODY_FLAGS = new Set(['-d', '--data', '--data-raw', '--data-binary', '--data-ascii', '--data-urlencode']);
+    const VALUE_FLAGS = new Set([
+      '-H', '--header', '-b', '--cookie', '-e', '--referer', '-A', '--user-agent',
+      '-u', '--user', '--connect-timeout', '-m', '--max-time', '-o', '--output',
+      '--url', '-F', '--form', '-r', '--range', '-E', '--cert', '--cacert'
+    ]);
+
+    function parseCurl(raw) {
+      const tokens = tokenizeCurl(raw.trim());
+      let url = '', method = '', body = '';
+
+      for (let idx = 0; idx < tokens.length; idx++) {
+        const t = tokens[idx];
+
+        if (idx === 0 && t.toLowerCase() === 'curl') continue;
+
+        if (t === '-X' || t === '--request') {
+          method = tokens[++idx] || '';
+          continue;
+        }
+        if (BODY_FLAGS.has(t)) {
+          body = tokens[++idx] || '';
+          continue;
+        }
+        if (t === '--url') {
+          url = tokens[++idx] || '';
+          continue;
+        }
+        if (t.startsWith('-')) {
+          if (VALUE_FLAGS.has(t)) idx++;
+          continue;
+        }
+        if (!url) url = t;
+      }
+
+      if (!method) method = body ? 'POST' : 'GET';
+
+      return { url, method: method.toUpperCase(), body };
+    }
+
+    const CIPHER_KEY_PRIORITY = [
+      'cipher', 'ciphertext', 'cipher_text', 'encrypted', 'encrypteddata',
+      'encrypted_data', 'payload', 'data', 'response', 'result', 'token'
+    ];
+
+    function findCipherInObject(obj, depth) {
+      depth = depth || 0;
+      if (depth > 3 || obj === null || typeof obj !== 'object' || Array.isArray(obj)) return null;
+
+      const keys = Object.keys(obj);
+
+      for (const pk of CIPHER_KEY_PRIORITY) {
+        for (const k of keys) {
+          if (k.toLowerCase() === pk && typeof obj[k] === 'string' && obj[k].length > 8) {
+            return obj[k];
+          }
+        }
+      }
+
+      for (const k of keys) {
+        if (typeof obj[k] === 'object') {
+          const found = findCipherInObject(obj[k], depth + 1);
+          if (found) return found;
+        }
+      }
+
+      return null;
+    }
+
+    function extractCipherFromBody(body) {
+      const trimmed = (body || '').trim();
+      if (!trimmed) return '';
+
+      try {
+        const obj = JSON.parse(trimmed);
+        if (typeof obj === 'string') return obj;
+        const found = findCipherInObject(obj);
+        if (found) return found;
+      } catch (e) {
+        // not JSON
+      }
+
+      if (/^[a-zA-Z0-9_.\[\]]+=/.test(trimmed)) {
+        try {
+          const params = new URLSearchParams(trimmed);
+          for (const pk of CIPHER_KEY_PRIORITY) {
+            for (const [k, v] of params.entries()) {
+              if (k.toLowerCase() === pk) return v;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      return trimmed;
+    }
+
+    function extractCipherFromUrl(url) {
+      try {
+        const u = new URL(url);
+        for (const pk of CIPHER_KEY_PRIORITY) {
+          for (const [k, v] of u.searchParams.entries()) {
+            if (k.toLowerCase() === pk) return v;
+          }
+        }
+      } catch (e) {
+        // invalid / relative URL
+      }
+      return '';
+    }
+
+    function processCurl() {
+      const raw = document.getElementById('curlInput').value;
+      const urlDisplay = document.getElementById('urlDisplay');
+      const methodSelect = document.getElementById('methodSelect');
+      const cipherBox = document.getElementById('extractedCipher');
+
+      if (!raw.trim()) {
+        urlDisplay.value = 'Waiting for input...';
+        urlDisplay.classList.add('waiting');
+        return;
+      }
+
+      const { url, method, body } = parseCurl(raw);
+
+      urlDisplay.value = url || 'No URL detected';
+      urlDisplay.classList.toggle('waiting', !url);
+
+      if (method && [...methodSelect.options].some(o => o.value === method)) {
+        methodSelect.value = method;
+      }
+
+      let cipher = extractCipherFromBody(body);
+      if (!cipher && url) cipher = extractCipherFromUrl(url);
+
+      cipherBox.value = cipher;
+      decryptCipher();
+    }
+
+    // ===== DECRYPTION =====
+    function parseCiphertext(str, format) {
+      const trimmed = str.trim();
+      if (format === 'HEX') {
+        return CryptoJS.lib.CipherParams.create({
+          ciphertext: CryptoJS.enc.Hex.parse(trimmed)
+        });
+      }
+      return trimmed;
+    }
+
+    function decryptCipher() {
+      const resultBox = document.getElementById('decryptedResult');
+      const cipherText = document.getElementById('extractedCipher').value.trim();
+
+      if (!cipherText) {
+        resultBox.value = '';
+        return;
+      }
+
+      try {
+        const key = document.getElementById('secretKey').value;
+        const iv = document.getElementById('ivInput').value;
+        const mode = getActiveText('mode');
+        const format = getActiveText('format');
+        const responseType = getActiveType('responseType');
+
+        const keyUtf8 = CryptoJS.enc.Utf8.parse(key);
+        const ivUtf8 = CryptoJS.enc.Utf8.parse(iv);
+
+        const options = {
+          mode: mode === 'CBC' ? CryptoJS.mode.CBC : CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7
+        };
+        if (mode === 'CBC') options.iv = ivUtf8;
+
+        const cipherParams = parseCiphertext(cipherText, format);
+        const decrypted = CryptoJS.AES.decrypt(cipherParams, keyUtf8, options);
+        let result = decrypted.toString(CryptoJS.enc.Utf8);
+
+        if (!result) throw new Error('empty');
+
+        if (responseType === 'json') {
+          try {
+            result = JSON.stringify(JSON.parse(result), null, 2);
+          } catch (e) {
+            // not valid JSON, leave as-is
+          }
+        }
+
+        resultBox.value = result;
+      } catch (err) {
+        resultBox.value = 'Decryption Error';
+      }
+    }
+
+    function reformatResult() {
+      const resultBox = document.getElementById('decryptedResult');
+      if (!resultBox.value || resultBox.value === 'Decryption Error') return;
+      decryptCipher();
+    }
+
+    // ===== PERSIST SECRET KEY / IV IN LOCAL STORAGE =====
+    const STORAGE_KEY_SECRET = 'curlDecrypt_secretKey';
+    const STORAGE_KEY_IV = 'curlDecrypt_iv';
+
+    function loadStoredCredentials() {
+      const storedKey = localStorage.getItem(STORAGE_KEY_SECRET);
+      const storedIv = localStorage.getItem(STORAGE_KEY_IV);
+      if (storedKey) document.getElementById('secretKey').value = storedKey;
+      if (storedIv) document.getElementById('ivInput').value = storedIv;
+    }
+
+    function persistCredentials() {
+      localStorage.setItem(STORAGE_KEY_SECRET, document.getElementById('secretKey').value);
+      localStorage.setItem(STORAGE_KEY_IV, document.getElementById('ivInput').value);
+    }
+
+    loadStoredCredentials();
+
+    // ===== EVENT WIRING =====
+    document.getElementById('curlInput').addEventListener('input', processCurl);
+    document.getElementById('extractedCipher').addEventListener('input', decryptCipher);
+    document.getElementById('secretKey').addEventListener('input', () => {
+      persistCredentials();
+      decryptCipher();
+    });
+    document.getElementById('ivInput').addEventListener('input', () => {
+      persistCredentials();
+      decryptCipher();
+    });
+    document.getElementById('methodSelect').addEventListener('change', () => {});
+
+    // ===== COPY BUTTONS =====
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const targetId = btn.dataset.copy;
+        const el = document.getElementById(targetId);
+        if (!el.value) return;
+        try {
+          await navigator.clipboard.writeText(el.value);
+          const original = btn.innerHTML;
+          btn.innerHTML = '&#10003;';
+          setTimeout(() => { btn.innerHTML = original; }, 1000);
+        } catch (e) {
+          // clipboard unavailable
+        }
+      });
+    });
+
+    // ===== THEME TOGGLE =====
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      themeToggle.innerHTML = document.body.classList.contains('light-mode')
+        ? '&#127769; Dark Mode'
+        : '&#9728; Light Mode';
+    });
+
+  </script>
+
+</body>
+
+</html>
